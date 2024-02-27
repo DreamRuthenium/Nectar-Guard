@@ -1,0 +1,54 @@
+#!/bin/bash
+
+set -e
+set -x
+
+# Check for correct number of arguments
+if [ $# -ne 2 ]; then
+    echo "Wrong number of arguments supplied."
+    echo "Usage: $0 <server_url> <deploy_key>."
+    exit 1
+fi
+
+server_url=$1
+deploy_key=$2
+
+# Register sensor with MHN server.
+#wget $server_url/static/registration.txt -O registration.sh
+chmod 755 registration.sh
+. ./registration.sh $server_url $deploy_key "cowrie"
+
+# Cowrie Configuration
+cd /cowrie/cowrie-git/etc
+cp cowrie.cfg.dist cowrie.cfg
+sed -i 's/hostname = svr04/hostname = server/g' cowrie.cfg
+#sed -i 's/listen_endpoints = tcp:2222:interface=0.0.0.0/listen_endpoints = tcp:22:interface=0.0.0.0/g' cowrie.cfg
+sed -i 's/version = SSH-2.0-OpenSSH_6.0p1 Debian-4+deb7u2/version = SSH-2.0-OpenSSH_6.7p1 Ubuntu-5ubuntu1.3/g' cowrie.cfg
+sed -i '/^\[output_hpfeeds3\]/,/^$/ s/^enabled = .*/enabled = true/' cowrie.cfg
+sed -i "/^\[output_hpfeeds3\]/,/^$/ s/^server = .*/server = $HPF_HOST/" cowrie.cfg
+sed -i "/^\[output_hpfeeds3\]/,/^$/ s/^port = .*/port = $HPF_PORT/" cowrie.cfg
+sed -i "/^\[output_hpfeeds3\]/,/^$/ s/^identifier = .*/identifier = $HPF_IDENT/" cowrie.cfg
+sed -i "/^\[output_hpfeeds3\]/,/^$/ s/^secret = .*/secret = $HPF_SECRET/" cowrie.cfg
+sed -i "/^\[output_hpfeeds3\]/,/^$/ s/^debug = .*/debug = false/" cowrie.cfg
+
+
+# Authbind Configuration
+#touch /etc/authbind/byport/22
+#chown cowrie /etc/authbind/byport/22
+#chmod 770 /etc/authbind/byport/22
+
+# Supervisor Configuration
+#cat > /etc/supervisor/conf.d/cowrie.conf <<EOF
+#[program:cowrie]
+#command=/cowrie/cowrie-git/bin/cowrie start
+#directory=/cowrie/cowrie-git
+#stdout_logfile=/cowrie/cowrie-git/var/log/cowrie/cowrie.out
+#stderr_logfile=/cowrie/cowrie-git/var/log/cowrie/cowrie.err
+#autostart=true
+#autorestart=true
+#stopasgroup=true
+#killasgroup=true
+#user=cowrie
+#EOF
+
+#supervisorctl update
